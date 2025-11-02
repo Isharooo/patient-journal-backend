@@ -29,7 +29,7 @@ public class Condition {
     private Practitioner diagnosedBy;
 
     @Column(nullable = false)
-    private String diagnosisCode; // t.ex. ICD-10 kod
+    private String diagnosisCode;
 
     @Column(nullable = false)
     private String diagnosisName;

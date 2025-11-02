@@ -28,10 +28,10 @@ public class Observation {
     private LocalDateTime observationDate = LocalDateTime.now();
 
     @Column(nullable = false)
-    private String observationType; // t.ex. "Blodtryck", "Vikt"
+    private String observationType;
 
     @Column(nullable = false)
-    private String value; // t.ex. "120/80", "75 kg"
+    private String value;
 
     private String notes;
 }

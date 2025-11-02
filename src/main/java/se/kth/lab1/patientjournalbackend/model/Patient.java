@@ -21,7 +21,7 @@ public class Patient {
     private User user;
 
     @Column(unique = true, nullable = false)
-    private String personalNumber; // Personnummer
+    private String personalNumber;
 
     @Column(nullable = false)
     private LocalDate dateOfBirth;
