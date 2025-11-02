@@ -1,5 +1,7 @@
 package se.kth.lab1.patientjournalbackend.controller;
 
+import se.kth.lab1.patientjournalbackend.dto.ConditionDTO;
+import se.kth.lab1.patientjournalbackend.dto.DTOMapper;
 import se.kth.lab1.patientjournalbackend.model.Condition;
 import se.kth.lab1.patientjournalbackend.service.ConditionService;
 import se.kth.lab1.patientjournalbackend.service.PatientService;
@@ -9,10 +11,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/conditions")
-@CrossOrigin(origins = "http://localhost:3000")
+@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:5173"})
 public class ConditionController {
 
     @Autowired
@@ -21,28 +24,39 @@ public class ConditionController {
     @Autowired
     private PatientService patientService;
 
+    @Autowired
+    private DTOMapper dtoMapper;
+
     @PostMapping
-    public ResponseEntity<Condition> createCondition(@RequestBody Condition condition) {
+    public ResponseEntity<ConditionDTO> createCondition(@RequestBody Condition condition) {
         Condition created = conditionService.createCondition(condition);
-        return ResponseEntity.status(HttpStatus.CREATED).body(created);
+        return ResponseEntity.status(HttpStatus.CREATED).body(dtoMapper.toConditionDTO(created));
     }
 
     @GetMapping
-    public ResponseEntity<List<Condition>> getAllConditions() {
-        return ResponseEntity.ok(conditionService.getAllConditions());
+    public ResponseEntity<List<ConditionDTO>> getAllConditions() {
+        List<ConditionDTO> conditions = conditionService.getAllConditions().stream()
+                .map(dtoMapper::toConditionDTO)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(conditions);
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<?> getConditionById(@PathVariable Long id) {
         return conditionService.getConditionById(id)
-                .map(ResponseEntity::ok)
+                .map(condition -> ResponseEntity.ok(dtoMapper.toConditionDTO(condition)))
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @GetMapping("/patient/{patientId}")
     public ResponseEntity<?> getConditionsByPatientId(@PathVariable Long patientId) {
         return patientService.getPatientById(patientId)
-                .map(patient -> ResponseEntity.ok(conditionService.getConditionsByPatient(patient)))
+                .map(patient -> {
+                    List<ConditionDTO> conditions = conditionService.getConditionsByPatient(patient).stream()
+                            .map(dtoMapper::toConditionDTO)
+                            .collect(Collectors.toList());
+                    return ResponseEntity.ok(conditions);
+                })
                 .orElse(ResponseEntity.notFound().build());
     }
 
@@ -50,7 +64,7 @@ public class ConditionController {
     public ResponseEntity<?> updateCondition(@PathVariable Long id, @RequestBody Condition condition) {
         try {
             Condition updated = conditionService.updateCondition(id, condition);
-            return ResponseEntity.ok(updated);
+            return ResponseEntity.ok(dtoMapper.toConditionDTO(updated));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
         }

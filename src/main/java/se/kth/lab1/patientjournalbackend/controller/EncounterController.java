@@ -1,5 +1,7 @@
 package se.kth.lab1.patientjournalbackend.controller;
 
+import se.kth.lab1.patientjournalbackend.dto.DTOMapper;
+import se.kth.lab1.patientjournalbackend.dto.EncounterDTO;
 import se.kth.lab1.patientjournalbackend.model.Encounter;
 import se.kth.lab1.patientjournalbackend.service.EncounterService;
 import se.kth.lab1.patientjournalbackend.service.PatientService;
@@ -9,10 +11,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/encounters")
-@CrossOrigin(origins = "http://localhost:3000")
+@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:5173"})
 public class EncounterController {
 
     @Autowired
@@ -21,28 +24,39 @@ public class EncounterController {
     @Autowired
     private PatientService patientService;
 
+    @Autowired
+    private DTOMapper dtoMapper;
+
     @PostMapping
-    public ResponseEntity<Encounter> createEncounter(@RequestBody Encounter encounter) {
+    public ResponseEntity<EncounterDTO> createEncounter(@RequestBody Encounter encounter) {
         Encounter created = encounterService.createEncounter(encounter);
-        return ResponseEntity.status(HttpStatus.CREATED).body(created);
+        return ResponseEntity.status(HttpStatus.CREATED).body(dtoMapper.toEncounterDTO(created));
     }
 
     @GetMapping
-    public ResponseEntity<List<Encounter>> getAllEncounters() {
-        return ResponseEntity.ok(encounterService.getAllEncounters());
+    public ResponseEntity<List<EncounterDTO>> getAllEncounters() {
+        List<EncounterDTO> encounters = encounterService.getAllEncounters().stream()
+                .map(dtoMapper::toEncounterDTO)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(encounters);
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<?> getEncounterById(@PathVariable Long id) {
         return encounterService.getEncounterById(id)
-                .map(ResponseEntity::ok)
+                .map(encounter -> ResponseEntity.ok(dtoMapper.toEncounterDTO(encounter)))
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @GetMapping("/patient/{patientId}")
     public ResponseEntity<?> getEncountersByPatientId(@PathVariable Long patientId) {
         return patientService.getPatientById(patientId)
-                .map(patient -> ResponseEntity.ok(encounterService.getEncountersByPatient(patient)))
+                .map(patient -> {
+                    List<EncounterDTO> encounters = encounterService.getEncountersByPatient(patient).stream()
+                            .map(dtoMapper::toEncounterDTO)
+                            .collect(Collectors.toList());
+                    return ResponseEntity.ok(encounters);
+                })
                 .orElse(ResponseEntity.notFound().build());
     }
 
@@ -50,7 +64,7 @@ public class EncounterController {
     public ResponseEntity<?> updateEncounter(@PathVariable Long id, @RequestBody Encounter encounter) {
         try {
             Encounter updated = encounterService.updateEncounter(id, encounter);
-            return ResponseEntity.ok(updated);
+            return ResponseEntity.ok(dtoMapper.toEncounterDTO(updated));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
         }

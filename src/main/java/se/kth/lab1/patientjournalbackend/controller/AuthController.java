@@ -1,5 +1,7 @@
 package se.kth.lab1.patientjournalbackend.controller;
 
+import se.kth.lab1.patientjournalbackend.dto.DTOMapper;
+import se.kth.lab1.patientjournalbackend.dto.UserDTO;
 import se.kth.lab1.patientjournalbackend.model.User;
 import se.kth.lab1.patientjournalbackend.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -7,23 +9,26 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/auth")
-@CrossOrigin(origins = "http://localhost:3000")
+@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:5173"})
 public class AuthController {
 
     @Autowired
     private UserService userService;
 
+    @Autowired
+    private DTOMapper dtoMapper;
+
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody User user) {
         try {
             User createdUser = userService.createUser(user);
-            return ResponseEntity.status(HttpStatus.CREATED).body(createdUser);
+            UserDTO userDTO = dtoMapper.toUserDTO(createdUser);
+            return ResponseEntity.status(HttpStatus.CREATED).body(userDTO);
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         }
@@ -46,13 +51,7 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid credentials");
         }
 
-        Map<String, Object> response = new HashMap<>();
-        response.put("id", user.getId());
-        response.put("username", user.getUsername());
-        response.put("role", user.getRole());
-        response.put("firstName", user.getFirstName());
-        response.put("lastName", user.getLastName());
-
-        return ResponseEntity.ok(response);
+        UserDTO userDTO = dtoMapper.toUserDTO(user);
+        return ResponseEntity.ok(userDTO);
     }
 }
