@@ -5,6 +5,7 @@ import se.kth.lab1.patientjournalbackend.model.User;
 import se.kth.lab1.patientjournalbackend.repository.PractitionerRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Optional;
 
@@ -14,22 +15,62 @@ public class PractitionerService {
     @Autowired
     private PractitionerRepository practitionerRepository;
 
+    @Transactional
     public Practitioner createPractitioner(Practitioner practitioner) {
-        return practitionerRepository.save(practitioner);
+        Practitioner saved = practitionerRepository.save(practitioner);
+        // Force load relations
+        if (saved.getUser() != null) {
+            saved.getUser().getFirstName();
+        }
+        if (saved.getOrganization() != null) {
+            saved.getOrganization().getName();
+        }
+        return saved;
     }
 
+    @Transactional(readOnly = true)
     public Optional<Practitioner> getPractitionerById(Long id) {
-        return practitionerRepository.findById(id);
+        Optional<Practitioner> practitioner = practitionerRepository.findById(id);
+        practitioner.ifPresent(p -> {
+            if (p.getUser() != null) {
+                p.getUser().getFirstName();
+            }
+            if (p.getOrganization() != null) {
+                p.getOrganization().getName();
+            }
+        });
+        return practitioner;
     }
 
+    @Transactional(readOnly = true)
     public Optional<Practitioner> getPractitionerByUser(User user) {
-        return practitionerRepository.findByUser(user);
+        Optional<Practitioner> practitioner = practitionerRepository.findByUser(user);
+        practitioner.ifPresent(p -> {
+            if (p.getUser() != null) {
+                p.getUser().getFirstName();
+            }
+            if (p.getOrganization() != null) {
+                p.getOrganization().getName();
+            }
+        });
+        return practitioner;
     }
 
+    @Transactional(readOnly = true)
     public List<Practitioner> getAllPractitioners() {
-        return practitionerRepository.findAll();
+        List<Practitioner> practitioners = practitionerRepository.findAll();
+        practitioners.forEach(p -> {
+            if (p.getUser() != null) {
+                p.getUser().getFirstName();
+            }
+            if (p.getOrganization() != null) {
+                p.getOrganization().getName();
+            }
+        });
+        return practitioners;
     }
 
+    @Transactional
     public Practitioner updatePractitioner(Long id, Practitioner updatedPractitioner) {
         Practitioner practitioner = practitionerRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Practitioner not found"));
@@ -37,7 +78,17 @@ public class PractitionerService {
         practitioner.setSpecialization(updatedPractitioner.getSpecialization());
         practitioner.setOrganization(updatedPractitioner.getOrganization());
 
-        return practitionerRepository.save(practitioner);
+        Practitioner saved = practitionerRepository.save(practitioner);
+
+        // Force load relations
+        if (saved.getUser() != null) {
+            saved.getUser().getFirstName();
+        }
+        if (saved.getOrganization() != null) {
+            saved.getOrganization().getName();
+        }
+
+        return saved;
     }
 
     public void deletePractitioner(Long id) {
