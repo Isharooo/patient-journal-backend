@@ -21,16 +21,16 @@ public class HapiFhirService {
 
     public HapiFhirService() {
         this.context = FhirContext.forR4();
-        // 15 s connect/read timeout
-        context.getRestfulClientFactory().setConnectTimeout(15_000);
-        context.getRestfulClientFactory().setSocketTimeout(15_000);
+        // 60 sekunders timeout, eftersom KTH-servern kan vara långsam
+        context.getRestfulClientFactory().setConnectTimeout(60_000);
+        context.getRestfulClientFactory().setSocketTimeout(60_000);
         context.getRestfulClientFactory().setServerValidationMode(ServerValidationModeEnum.NEVER); // hoppa cert-validering mot /metadata vid start
         this.client = context.newRestfulGenericClient(BASE_URL);
         this.client.registerInterceptor(new ca.uhn.fhir.rest.client.interceptor.SimpleRequestHeaderInterceptor("User-Agent","patient-journal-backend/1.0"));
     }
 
     /**
-     * Hämtar alla patienter från HAPI servern med pagination support
+     * Hämtar ALLA patienter från HAPI servern med fullt stöd för pagination.
      */
     public List<Patient> getAllPatients() {
         List<Patient> allPatients = new ArrayList<>();
@@ -42,16 +42,25 @@ public class HapiFhirService {
                 .returnBundle(Bundle.class)
                 .execute();
 
-        // Add patients from first page
-        allPatients.addAll(extractPatientsFromBundle(bundle));
+        // Extrahera resurser från första sidan (FIX: Använder toListOfEntries)
+        allPatients.addAll(
+                BundleUtil.toListOfEntries(context, bundle).stream()
+                        .map(entry -> (Patient) entry.getResource())
+                        .collect(Collectors.toList())
+        );
 
-        // Handle pagination - fetch all pages
+        // Hantera pagination - hämta alla återstående sidor
         while (bundle.getLink(Bundle.LINK_NEXT) != null) {
             bundle = client
                     .loadPage()
                     .next(bundle)
                     .execute();
-            allPatients.addAll(extractPatientsFromBundle(bundle));
+            // Extrahera resurser från nästa sida (FIX: Använder toListOfEntries)
+            allPatients.addAll(
+                    BundleUtil.toListOfEntries(context, bundle).stream()
+                            .map(entry -> (Patient) entry.getResource())
+                            .collect(Collectors.toList())
+            );
         }
 
         return allPatients;
@@ -64,7 +73,7 @@ public class HapiFhirService {
         return client
                 .read()
                 .resource(Patient.class)
-                .withId(id)
+                .withId(id) // Använder det rena sträng-ID:t
                 .execute();
     }
 
@@ -79,37 +88,16 @@ public class HapiFhirService {
                 .returnBundle(Bundle.class)
                 .execute();
 
-        List<Patient> patients = extractPatientsFromBundle(bundle);
+        // Använder toListOfEntries här också för konsekvens
+        List<Patient> patients = BundleUtil.toListOfEntries(context, bundle).stream()
+                .map(entry -> (Patient) entry.getResource())
+                .collect(Collectors.toList());
+
         return patients.isEmpty() ? null : patients.get(0);
     }
 
     /**
-     * Hämtar alla observationer från HAPI
-     */
-    public List<Observation> getAllObservations() {
-        List<Observation> allObservations = new ArrayList<>();
-
-        Bundle bundle = client
-                .search()
-                .forResource(Observation.class)
-                .returnBundle(Bundle.class)
-                .execute();
-
-        allObservations.addAll(extractObservationsFromBundle(bundle));
-
-        while (bundle.getLink(Bundle.LINK_NEXT) != null) {
-            bundle = client
-                    .loadPage()
-                    .next(bundle)
-                    .execute();
-            allObservations.addAll(extractObservationsFromBundle(bundle));
-        }
-
-        return allObservations;
-    }
-
-    /**
-     * Hämtar observationer för en specifik patient
+     * Hämtar observationer för en specifik patient, med stöd för pagination.
      */
     public List<Observation> getObservationsByPatientId(String patientId) {
         List<Observation> allObservations = new ArrayList<>();
@@ -121,46 +109,31 @@ public class HapiFhirService {
                 .returnBundle(Bundle.class)
                 .execute();
 
-        allObservations.addAll(extractObservationsFromBundle(bundle));
+        // FIX: Använder toListOfEntries
+        allObservations.addAll(
+                BundleUtil.toListOfEntries(context, bundle).stream()
+                        .map(entry -> (Observation) entry.getResource())
+                        .collect(Collectors.toList())
+        );
 
         while (bundle.getLink(Bundle.LINK_NEXT) != null) {
             bundle = client
                     .loadPage()
                     .next(bundle)
                     .execute();
-            allObservations.addAll(extractObservationsFromBundle(bundle));
+            // FIX: Använder toListOfEntries
+            allObservations.addAll(
+                    BundleUtil.toListOfEntries(context, bundle).stream()
+                            .map(entry -> (Observation) entry.getResource())
+                            .collect(Collectors.toList())
+            );
         }
 
         return allObservations;
     }
 
     /**
-     * Hämtar alla encounters
-     */
-    public List<Encounter> getAllEncounters() {
-        List<Encounter> allEncounters = new ArrayList<>();
-
-        Bundle bundle = client
-                .search()
-                .forResource(Encounter.class)
-                .returnBundle(Bundle.class)
-                .execute();
-
-        allEncounters.addAll(extractEncountersFromBundle(bundle));
-
-        while (bundle.getLink(Bundle.LINK_NEXT) != null) {
-            bundle = client
-                    .loadPage()
-                    .next(bundle)
-                    .execute();
-            allEncounters.addAll(extractEncountersFromBundle(bundle));
-        }
-
-        return allEncounters;
-    }
-
-    /**
-     * Hämtar encounters för en specifik patient
+     * Hämtar encounters för en specifik patient, med stöd för pagination.
      */
     public List<Encounter> getEncountersByPatientId(String patientId) {
         List<Encounter> allEncounters = new ArrayList<>();
@@ -172,46 +145,31 @@ public class HapiFhirService {
                 .returnBundle(Bundle.class)
                 .execute();
 
-        allEncounters.addAll(extractEncountersFromBundle(bundle));
+        // FIX: Använder toListOfEntries
+        allEncounters.addAll(
+                BundleUtil.toListOfEntries(context, bundle).stream()
+                        .map(entry -> (Encounter) entry.getResource())
+                        .collect(Collectors.toList())
+        );
 
         while (bundle.getLink(Bundle.LINK_NEXT) != null) {
             bundle = client
                     .loadPage()
                     .next(bundle)
                     .execute();
-            allEncounters.addAll(extractEncountersFromBundle(bundle));
+            // FIX: Använder toListOfEntries
+            allEncounters.addAll(
+                    BundleUtil.toListOfEntries(context, bundle).stream()
+                            .map(entry -> (Encounter) entry.getResource())
+                            .collect(Collectors.toList())
+            );
         }
 
         return allEncounters;
     }
 
     /**
-     * Hämtar alla conditions
-     */
-    public List<Condition> getAllConditions() {
-        List<Condition> allConditions = new ArrayList<>();
-
-        Bundle bundle = client
-                .search()
-                .forResource(Condition.class)
-                .returnBundle(Bundle.class)
-                .execute();
-
-        allConditions.addAll(extractConditionsFromBundle(bundle));
-
-        while (bundle.getLink(Bundle.LINK_NEXT) != null) {
-            bundle = client
-                    .loadPage()
-                    .next(bundle)
-                    .execute();
-            allConditions.addAll(extractConditionsFromBundle(bundle));
-        }
-
-        return allConditions;
-    }
-
-    /**
-     * Hämtar conditions för en specifik patient
+     * Hämtar conditions för en specifik patient, med stöd för pagination.
      */
     public List<Condition> getConditionsByPatientId(String patientId) {
         List<Condition> allConditions = new ArrayList<>();
@@ -223,21 +181,31 @@ public class HapiFhirService {
                 .returnBundle(Bundle.class)
                 .execute();
 
-        allConditions.addAll(extractConditionsFromBundle(bundle));
+        // FIX: Använder toListOfEntries
+        allConditions.addAll(
+                BundleUtil.toListOfEntries(context, bundle).stream()
+                        .map(entry -> (Condition) entry.getResource())
+                        .collect(Collectors.toList())
+        );
 
         while (bundle.getLink(Bundle.LINK_NEXT) != null) {
             bundle = client
                     .loadPage()
                     .next(bundle)
                     .execute();
-            allConditions.addAll(extractConditionsFromBundle(bundle));
+            // FIX: Använder toListOfEntries
+            allConditions.addAll(
+                    BundleUtil.toListOfEntries(context, bundle).stream()
+                            .map(entry -> (Condition) entry.getResource())
+                            .collect(Collectors.toList())
+            );
         }
 
         return allConditions;
     }
 
     /**
-     * Hämtar alla practitioners
+     * Hämtar alla practitioners, med stöd för pagination.
      */
     public List<Practitioner> getAllPractitioners() {
         List<Practitioner> allPractitioners = new ArrayList<>();
@@ -248,14 +216,24 @@ public class HapiFhirService {
                 .returnBundle(Bundle.class)
                 .execute();
 
-        allPractitioners.addAll(extractPractitionersFromBundle(bundle));
+        // FIX: Använder toListOfEntries
+        allPractitioners.addAll(
+                BundleUtil.toListOfEntries(context, bundle).stream()
+                        .map(entry -> (Practitioner) entry.getResource())
+                        .collect(Collectors.toList())
+        );
 
         while (bundle.getLink(Bundle.LINK_NEXT) != null) {
             bundle = client
                     .loadPage()
                     .next(bundle)
                     .execute();
-            allPractitioners.addAll(extractPractitionersFromBundle(bundle));
+            // FIX: Använder toListOfEntries
+            allPractitioners.addAll(
+                    BundleUtil.toListOfEntries(context, bundle).stream()
+                            .map(entry -> (Practitioner) entry.getResource())
+                            .collect(Collectors.toList())
+            );
         }
 
         return allPractitioners;
@@ -270,37 +248,5 @@ public class HapiFhirService {
                 .resource(Practitioner.class)
                 .withId(id)
                 .execute();
-    }
-
-    // Helper methods för att extrahera resurser från Bundles
-
-    private List<Patient> extractPatientsFromBundle(Bundle bundle) {
-        return BundleUtil.toListOfEntries(context, bundle).stream()
-                .map(entry -> (Patient) entry.getResource())
-                .collect(Collectors.toList());
-    }
-
-    private List<Observation> extractObservationsFromBundle(Bundle bundle) {
-        return BundleUtil.toListOfEntries(context, bundle).stream()
-                .map(entry -> (Observation) entry.getResource())
-                .collect(Collectors.toList());
-    }
-
-    private List<Encounter> extractEncountersFromBundle(Bundle bundle) {
-        return BundleUtil.toListOfEntries(context, bundle).stream()
-                .map(entry -> (Encounter) entry.getResource())
-                .collect(Collectors.toList());
-    }
-
-    private List<Condition> extractConditionsFromBundle(Bundle bundle) {
-        return BundleUtil.toListOfEntries(context, bundle).stream()
-                .map(entry -> (Condition) entry.getResource())
-                .collect(Collectors.toList());
-    }
-
-    private List<Practitioner> extractPractitionersFromBundle(Bundle bundle) {
-        return BundleUtil.toListOfEntries(context, bundle).stream()
-                .map(entry -> (Practitioner) entry.getResource())
-                .collect(Collectors.toList());
     }
 }

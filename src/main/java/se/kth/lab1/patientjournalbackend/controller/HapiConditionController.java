@@ -21,18 +21,6 @@ public class HapiConditionController {
     @Autowired
     private HapiFhirMapper hapiFhirMapper;
 
-    @GetMapping
-    public ResponseEntity<List<ConditionDTO>> getAllConditions() {
-        try {
-            List<ConditionDTO> conditions = hapiFhirService.getAllConditions().stream()
-                    .map(hapiFhirMapper::toConditionDTO)
-                    .collect(Collectors.toList());
-            return ResponseEntity.ok(conditions);
-        } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.internalServerError().build();
-        }
-    }
 
     @GetMapping("/patient/{patientId}")
     public ResponseEntity<List<ConditionDTO>> getConditionsByPatientId(@PathVariable String patientId) {

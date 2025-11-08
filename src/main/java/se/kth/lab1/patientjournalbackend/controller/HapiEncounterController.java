@@ -21,18 +21,6 @@ public class HapiEncounterController {
     @Autowired
     private HapiFhirMapper hapiFhirMapper;
 
-    @GetMapping
-    public ResponseEntity<List<EncounterDTO>> getAllEncounters() {
-        try {
-            List<EncounterDTO> encounters = hapiFhirService.getAllEncounters().stream()
-                    .map(hapiFhirMapper::toEncounterDTO)
-                    .collect(Collectors.toList());
-            return ResponseEntity.ok(encounters);
-        } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.internalServerError().build();
-        }
-    }
 
     @GetMapping("/patient/{patientId}")
     public ResponseEntity<List<EncounterDTO>> getEncountersByPatientId(@PathVariable String patientId) {

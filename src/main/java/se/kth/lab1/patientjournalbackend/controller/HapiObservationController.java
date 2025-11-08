@@ -22,18 +22,6 @@ public class HapiObservationController {
     @Autowired
     private HapiFhirMapper hapiFhirMapper;
 
-    @GetMapping
-    public ResponseEntity<List<ObservationDTO>> getAllObservations() {
-        try {
-            List<ObservationDTO> observations = hapiFhirService.getAllObservations().stream()
-                    .map(hapiFhirMapper::toObservationDTO)
-                    .collect(Collectors.toList());
-            return ResponseEntity.ok(observations);
-        } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.internalServerError().build();
-        }
-    }
 
     @GetMapping("/patient/{patientId}")
     public ResponseEntity<List<ObservationDTO>> getObservationsByPatientId(@PathVariable String patientId) {
