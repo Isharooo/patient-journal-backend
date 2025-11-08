@@ -21,16 +21,18 @@ public class HapiPatientController {
     @Autowired
     private HapiFhirMapper hapiFhirMapper;
 
+
     @GetMapping
     public ResponseEntity<List<PatientDTO>> getAllPatients() {
         try {
-            List<PatientDTO> patients = hapiFhirService.getAllPatients().stream()
+            var patients = hapiFhirService.getAllPatients().stream()
                     .map(hapiFhirMapper::toPatientDTO)
                     .collect(Collectors.toList());
             return ResponseEntity.ok(patients);
         } catch (Exception e) {
+            // tillfällig logg för felsökning
             e.printStackTrace();
-            return ResponseEntity.internalServerError().build();
+            return ResponseEntity.status(500).body(List.of());
         }
     }
 

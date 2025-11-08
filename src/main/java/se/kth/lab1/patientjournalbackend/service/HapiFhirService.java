@@ -2,6 +2,7 @@ package se.kth.lab1.patientjournalbackend.service;
 
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.client.api.IGenericClient;
+import ca.uhn.fhir.rest.client.api.ServerValidationModeEnum;
 import ca.uhn.fhir.util.BundleUtil;
 import org.hl7.fhir.instance.model.api.IBaseBundle;
 import org.hl7.fhir.r4.model.*;
@@ -19,10 +20,13 @@ public class HapiFhirService {
     private static final String BASE_URL = "https://hapi-fhir.app.cloud.cbh.kth.se/fhir";
 
     public HapiFhirService() {
-        // Skapar ett kontext för FHIR med rätt release version
         this.context = FhirContext.forR4();
-        // Skapar en klient för att kommunicera med HAPI servern över REST
+        // 15 s connect/read timeout
+        context.getRestfulClientFactory().setConnectTimeout(15_000);
+        context.getRestfulClientFactory().setSocketTimeout(15_000);
+        context.getRestfulClientFactory().setServerValidationMode(ServerValidationModeEnum.NEVER); // hoppa cert-validering mot /metadata vid start
         this.client = context.newRestfulGenericClient(BASE_URL);
+        this.client.registerInterceptor(new ca.uhn.fhir.rest.client.interceptor.SimpleRequestHeaderInterceptor("User-Agent","patient-journal-backend/1.0"));
     }
 
     /**
