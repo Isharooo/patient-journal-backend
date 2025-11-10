@@ -27,7 +27,9 @@ public class DTOMapper {
                 patient.getPersonalNumber(),
                 patient.getDateOfBirth(),
                 patient.getAddress(),
-                patient.getPhoneNumber()
+                patient.getPhoneNumber(),
+                null
+
         );
     }
 

@@ -9,16 +9,18 @@ import java.time.ZoneId;
 @Component
 public class HapiFhirMapper {
 
+    private static final String PNR_SYSTEM = "http://electronichealth.se/identifier/personnummer";
+
     public PatientDTO toPatientDTO(Patient fhirPatient) {
         if (fhirPatient == null) return null;
 
         PatientDTO dto = new PatientDTO();
 
-        // FHIR använder UUID strings - konvertera till Long via hashCode
         String fhirId = fhirPatient.getIdElement().getIdPart();
+        dto.setFhirId(fhirId);
+
         dto.setId((long) Math.abs(fhirId.hashCode()));
 
-        // Name
         if (!fhirPatient.getName().isEmpty()) {
             HumanName name = fhirPatient.getName().get(0);
             UserDTO userDTO = new UserDTO();
@@ -28,22 +30,29 @@ public class HapiFhirMapper {
             dto.setUser(userDTO);
         }
 
-        // Personal number
+
         for (Identifier identifier : fhirPatient.getIdentifier()) {
-            if (identifier.hasValue()) {
+            if (PNR_SYSTEM.equals(identifier.getSystem()) && identifier.hasValue()) {
                 dto.setPersonalNumber(identifier.getValue());
                 break;
             }
         }
 
-        // Birth date
+        if (dto.getPersonalNumber() == null) {
+            for (Identifier identifier : fhirPatient.getIdentifier()) {
+                if (identifier.hasValue()) {
+                    dto.setPersonalNumber(identifier.getValue());
+                    break;
+                }
+            }
+        }
+
         if (fhirPatient.hasBirthDate()) {
             dto.setDateOfBirth(fhirPatient.getBirthDate().toInstant()
                     .atZone(ZoneId.systemDefault())
                     .toLocalDate());
         }
 
-        // Address
         if (!fhirPatient.getAddress().isEmpty()) {
             Address address = fhirPatient.getAddress().get(0);
             StringBuilder addressStr = new StringBuilder();
@@ -58,7 +67,6 @@ public class HapiFhirMapper {
             dto.setAddress(addressStr.toString());
         }
 
-        // Phone
         for (ContactPoint telecom : fhirPatient.getTelecom()) {
             if (telecom.getSystem() == ContactPoint.ContactPointSystem.PHONE) {
                 dto.setPhoneNumber(telecom.getValue());

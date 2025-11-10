@@ -30,7 +30,6 @@ public class HapiPatientController {
                     .collect(Collectors.toList());
             return ResponseEntity.ok(patients);
         } catch (Exception e) {
-            // tillfällig logg för felsökning
             e.printStackTrace();
             return ResponseEntity.status(500).body(List.of());
         }

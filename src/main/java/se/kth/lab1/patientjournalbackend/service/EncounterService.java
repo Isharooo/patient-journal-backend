@@ -24,10 +24,8 @@ public class EncounterService {
     public Encounter createEncounter(Encounter encounter) {
         Encounter saved = encounterRepository.save(encounter);
 
-        // Refresh to load all relationships
         entityManager.refresh(saved);
 
-        // Force load all relations
         if (saved.getPatient() != null) {
             saved.getPatient().getUser().getFirstName();
         }
@@ -97,10 +95,8 @@ public class EncounterService {
 
         Encounter saved = encounterRepository.save(encounter);
 
-        // Refresh to load all relationships
         entityManager.refresh(saved);
 
-        // Force load relations
         if (saved.getPatient() != null) {
             saved.getPatient().getUser().getFirstName();
         }

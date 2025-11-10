@@ -23,10 +23,8 @@ public class ConditionService {
     public Condition createCondition(Condition condition) {
         Condition saved = conditionRepository.save(condition);
 
-        // Refresh to load all relationships
         entityManager.refresh(saved);
 
-        // Force load relations
         if (saved.getPatient() != null) {
             saved.getPatient().getUser().getFirstName();
         }
@@ -93,10 +91,8 @@ public class ConditionService {
 
         Condition saved = conditionRepository.save(condition);
 
-        // Refresh to load all relationships
         entityManager.refresh(saved);
 
-        // Force load relations
         if (saved.getPatient() != null) {
             saved.getPatient().getUser().getFirstName();
         }
