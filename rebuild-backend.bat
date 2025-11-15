@@ -11,4 +11,4 @@ docker build --no-cache -t patient-backend:latest .
 ECHO 4/4: Startar patient-backend
 docker run -d --name patient-backend --network patient-network --dns 8.8.8.8 --dns 8.8.4.4 -e "SPRING_DATASOURCE_URL=jdbc:mysql://mysql-db:3306/patient_journal?createDatabaseIfNotExist=true" -e "SPRING_DATASOURCE_USERNAME=root" -e "SPRING_DATASOURCE_PASSWORD=rootpassword" -e "SPRING_JPA_HIBERNATE_DDL_AUTO=update" -p 8080:8080 patient-backend:latest
 
-ECHO Färdig
+ECHO Klart!
